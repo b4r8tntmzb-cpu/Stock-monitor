@@ -1,0 +1,43 @@
+name: Stock Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore notification state
+        uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: state
+          key: stock-monitor-notified-v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run stock check
+        env:
+          PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+          PUSHOVER_API_TOKEN: ${{ secrets.PUSHOVER_API_TOKEN }}
+          STATE_DIR: ${{ github.workspace }}/state
+        run: |
+          mkdir -p state
+          python check_stock.py
+
+      - name: Save notification state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: stock-monitor-notified-v1
